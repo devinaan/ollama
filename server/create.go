@@ -265,7 +265,7 @@ func convertFromSafetensors(files map[string]string, baseLayers []*layerGGML, is
 	if !isAdapter {
 		fn(api.ProgressResponse{Status: "converting model"})
 		mediaType = "application/vnd.ollama.image.model"
-		if err := convert.ConvertModel(os.DirFS(tmpDir), t); err != nil {
+		if err := convert.ConvertModel(os.DirFS(tmpDir), t, req.Tokenizer); err != nil {
 			return nil, err
 		}
 	} else {

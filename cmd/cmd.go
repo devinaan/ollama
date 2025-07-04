@@ -132,6 +132,11 @@ func CreateHandler(cmd *cobra.Command, args []string) error {
 		req.Quantize = quantize
 	}
 
+	tokenizer, _ := cmd.Flags().GetString("tokenizer")
+	if tokenizer != "" {
+		req.Tokenizer = tokenizer
+	}
+
 	client, err := api.ClientFromEnvironment()
 	if err != nil {
 		return err
@@ -1424,6 +1429,7 @@ func NewCLI() *cobra.Command {
 
 	createCmd.Flags().StringP("file", "f", "", "Name of the Modelfile (default \"Modelfile\"")
 	createCmd.Flags().StringP("quantize", "q", "", "Quantize model to this level (e.g. q4_K_M)")
+	createCmd.Flags().String("tokenizer", "", "Path to external tokenizer file (tokenizer.json or tokenizer.model)")
 
 	showCmd := &cobra.Command{
 		Use:     "show MODEL",

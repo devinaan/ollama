@@ -9,6 +9,7 @@ import (
 	"io/fs"
 	"log/slog"
 	"os"
+	"path/filepath"
 	"slices"
 	"strings"
 
@@ -34,7 +35,25 @@ type Tokenizer struct {
 	Template string
 }
 
-func parseTokenizer(fsys fs.FS, specialTokenTypes []string) (*Tokenizer, error) {
+func parseTokenizer(fsys fs.FS, specialTokenTypes []string, externalTokenizerPath string) (*Tokenizer, error) {
+	if externalTokenizerPath != "" {
+		if _, err := os.Stat(externalTokenizerPath); err != nil {
+			return nil, fmt.Errorf("external tokenizer file not found: %s", externalTokenizerPath)
+		}
+		
+		tokenizerDir := filepath.Dir(externalTokenizerPath)
+		externalFS := os.DirFS(tokenizerDir)
+		
+		if v, err := parseVocabularyFromPath(externalFS, filepath.Base(externalTokenizerPath)); err == nil {
+			t := &Tokenizer{
+				Vocabulary: v,
+				Pre:        "default",
+			}
+			return parseTokenizerFromFS(externalFS, "", specialTokenTypes, t)
+		}
+		return nil, fmt.Errorf("failed to parse external tokenizer: %s", externalTokenizerPath)
+	}
+
 	v, err := parseVocabulary(fsys)
 	if err != nil {
 		return nil, err
@@ -197,6 +216,72 @@ func parseTokenizer(fsys fs.FS, specialTokenTypes []string) (*Tokenizer, error) 
 					t.SpecialVocabulary[i].IDs = ids
 				}
 			}
+		}
+	}
+
+	return t, nil
+}
+
+func parseVocabularyFromPath(fsys fs.FS, filename string) (*Vocabulary, error) {
+	switch filepath.Ext(filename) {
+	case ".model":
+		return parseSentencePiece(fsys)
+	case ".json":
+		return parseVocabularyFromTokenizer(fsys)
+	default:
+		return nil, fmt.Errorf("unsupported tokenizer format: %s", filename)
+	}
+}
+
+func parseTokenizerFromFS(fsys fs.FS, tokenizerFile string, specialTokenTypes []string, t *Tokenizer) (*Tokenizer, error) {
+	bts, err := fs.ReadFile(fsys, "tokenizer_config.json")
+	if err == nil {
+		cfg := struct {
+			ChatTemplate string `json:"chat_template"`
+		}{}
+
+		if err := json.Unmarshal(bts, &cfg); err == nil {
+			t.Template = cfg.ChatTemplate
+		}
+	}
+
+	bts, err = fs.ReadFile(fsys, "tokenizer.json")
+	if err != nil {
+		return t, nil
+	}
+
+	var tokenizerJSON struct {
+		PreTokenizer struct {
+			Type string `json:"type"`
+		} `json:"pre_tokenizer"`
+		AddedTokens []struct {
+			ID      int    `json:"id"`
+			Content string `json:"content"`
+			Special bool   `json:"special"`
+		} `json:"added_tokens"`
+	}
+
+	if err := json.Unmarshal(bts, &tokenizerJSON); err != nil {
+		return nil, err
+	}
+
+	switch tokenizerJSON.PreTokenizer.Type {
+	case "ByteLevel":
+		t.Pre = "llama-bpe"
+	case "Metaspace":
+		t.Pre = "llama-spm"
+	default:
+		t.Pre = "default"
+	}
+
+	for _, token := range tokenizerJSON.AddedTokens {
+		if token.Special && slices.Contains(specialTokenTypes, token.Content) {
+			sv := &SpecialVocabulary{
+				Type:    token.Content,
+				ID:      token.ID,
+				Content: token.Content,
+			}
+			t.SpecialVocabulary = append(t.SpecialVocabulary, sv)
 		}
 	}
 

@@ -312,10 +312,10 @@ func TestParseTokenizer(t *testing.T) {
 
 	for _, tt := range cases {
 		t.Run(tt.name, func(t *testing.T) {
-			tokenizer, err := parseTokenizer(tt.fsys, tt.specialTokenTypes)
-			if err != nil {
-				t.Fatalf("unexpected error: %v", err)
-			}
+		tokenizer, err := parseTokenizer(tt.fsys, tt.specialTokenTypes, "")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
 
 			if diff := cmp.Diff(tt.want, tokenizer); diff != "" {
 				t.Errorf("unexpected tokenizer (-want +got):\n%s", diff)
