@@ -360,6 +360,7 @@ type CreateRequest struct {
 	System     string            `json:"system,omitempty"`
 	Parameters map[string]any    `json:"parameters,omitempty"`
 	Messages   []Message         `json:"messages,omitempty"`
+	Tokenizer  string            `json:"tokenizer,omitempty"`
 
 	// Deprecated: set the model name with Model instead
 	Name string `json:"name"`

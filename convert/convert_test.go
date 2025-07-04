@@ -37,7 +37,7 @@ func convertFull(t *testing.T, fsys fs.FS) (*os.File, ggml.KV, ggml.Tensors) {
 	}
 	defer f.Close()
 
-	if err := ConvertModel(fsys, f); err != nil {
+	if err := ConvertModel(fsys, f, ""); err != nil {
 		t.Fatal(err)
 	}
 

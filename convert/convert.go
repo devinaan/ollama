@@ -157,7 +157,7 @@ func ConvertAdapter(fsys fs.FS, f *os.File, baseKV ggml.KV) error {
 // and files it finds in the input path.
 // Supported input model formats include safetensors.
 // Supported input tokenizers files include tokenizer.json (preferred) and tokenizer.model.
-func ConvertModel(fsys fs.FS, f *os.File) error {
+func ConvertModel(fsys fs.FS, f *os.File, externalTokenizerPath string) error {
 	bts, err := fs.ReadFile(fsys, "config.json")
 	if err != nil {
 		return err
@@ -216,7 +216,7 @@ func ConvertModel(fsys fs.FS, f *os.File) error {
 		}
 	}
 
-	t, err := parseTokenizer(fsys, conv.specialTokenTypes())
+	t, err := parseTokenizer(fsys, conv.specialTokenTypes(), externalTokenizerPath)
 	if err != nil {
 		return err
 	}
